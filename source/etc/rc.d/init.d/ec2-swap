@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# Init file for ec2-swap
+#
+# chkconfig: 2345 20 20
+# description:  ec2-swap is to create swapon swap image on EC2 instance store
+#
+
+# source function library
+. /etc/rc.d/init.d/functions
+. /etc/sysconfig/ec2-swap
+
+RETVAL=0
+
+start() {
+	INSTANCEVOL_REALNAME=/dev/`curl -s 169.254.169.254/latest/meta-data/block-device-mapping/$INSTANCEVOL_VIRTNAME`
+	MEMSIZE=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
+
+	if [ $MEMSIZE -lt 2097152 ]; then
+	  SIZE=${((MEMSIZE * 2))}k
+	elif [ $MEMSIZE -lt 8388608 ]; then
+	  SIZE=${MEMSIZE}k
+	elif [ $MEMSIZE -lt 67108864 ]; then
+	  SIZE=${((MEMSIZE / 2))}k
+	else
+	  SIZE=4194304k
+	fi
+
+	mkfs  -t ext4 $INSTANCEVOL_REALNAME
+	if [ ! -d $INSTANCEVOL_MOUNTPOINT ]; then
+	  mkdir $INSTANCEVOL_MOUNTPOINT
+	fi
+	mount -t ext4 $INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT
+	fallocate -l $SIZE $SWAPFILENAME && mkswap $SWAPFILENAME && swapon $SWAPFILENAME
+}
+
+stop () {
+	:
+}
+
+case "$1" in
+        start)
+                start
+                ;;
+        stop)
+                ;;
+        *)
+                echo $"Usage: $0 {start}"
+                RETVAL=1
+esac
+exit $RETVAL
