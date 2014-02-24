@@ -21,11 +21,11 @@ start() {
 	# determine swap file size from memory capacity according to below URL
         # https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Installation_Guide/s2-diskpartrecommend-x86.html
 	if [ $MEMSIZE -lt 2097152 ]; then
-	  SIZE=${((MEMSIZE * 2))}k
+	  SIZE=$((MEMSIZE * 2))k
 	elif [ $MEMSIZE -lt 8388608 ]; then
 	  SIZE=${MEMSIZE}k
 	elif [ $MEMSIZE -lt 67108864 ]; then
-	  SIZE=${((MEMSIZE / 2))}k
+	  SIZE=$((MEMSIZE / 2))k
 	else
 	  SIZE=4194304k
 	fi
