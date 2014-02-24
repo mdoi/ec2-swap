@@ -13,9 +13,13 @@
 RETVAL=0
 
 start() {
+	# get ephemeral disk device name by EC2 meta-data server
 	INSTANCEVOL_REALNAME=/dev/`curl -s 169.254.169.254/latest/meta-data/block-device-mapping/$INSTANCEVOL_VIRTNAME`
+	# get memory capacity
 	MEMSIZE=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
 
+	# determine swap file size from memory capacity according to below URL
+        # https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Installation_Guide/s2-diskpartrecommend-x86.html
 	if [ $MEMSIZE -lt 2097152 ]; then
 	  SIZE=${((MEMSIZE * 2))}k
 	elif [ $MEMSIZE -lt 8388608 ]; then
@@ -26,11 +30,22 @@ start() {
 	  SIZE=4194304k
 	fi
 
-	mkfs  -t ext4 $INSTANCEVOL_REALNAME
+	# create mount point if it is not exist.
 	if [ ! -d $INSTANCEVOL_MOUNTPOINT ]; then
 	  mkdir $INSTANCEVOL_MOUNTPOINT
 	fi
+
+	# disable ephemeral disk mount entry by cloud-init
+	sed -i 's/\(^.*'$INSTANCEVOL_VIRTNAME'.*$\)/#\1/' /etc/fstab
+
+	# unmount, mkfs and mount ephemeral disk to execute fallocate
+	if cat /proc/mounts | grep $INSTANCEVOL_MOUNTPOINT; then
+		umount $INSTANCEVOL_MOUNTPOINT
+	fi
+	mkfs  -t ext4 $INSTANCEVOL_REALNAME
 	mount -t ext4 $INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT
+
+	# create and enable swap file
 	fallocate -l $SIZE $SWAPFILENAME && mkswap $SWAPFILENAME && swapon $SWAPFILENAME
 }
 
