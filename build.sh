@@ -5,7 +5,7 @@ fpm -s dir -t rpm \
 	-n ec2-swap \
 	-a noarch \
 	-C ./source \
-	-p ./repo/yum/x86_64 \
+	-p ../repo/yum/x86_64 \
 	--maintainer "Ryuta Otaki<otaki.ryuta@classmethod.jp>" \
 	--vendor "Classmethod, Inc." \
 	--prefix / \
@@ -17,5 +17,5 @@ fpm -s dir -t rpm \
 	--before-remove ./script/preuninstall \
 	.
 
-cd ./repo/yum/x86_64
+cd ../repo/yum/x86_64
 createrepo -v .
