@@ -3,6 +3,11 @@ ec2-swap: create and swapon swap image on EC2 instance store
 
 ec2-swap is an RPM package project to create and swapon an swap image on EC2 instance store on Linux boot sequence.
 
+# CAUTION
+
+This product is still in heavy development.
+DO NOT USE production environment.
+
 # Getting Started
 
 ec2-swap RPM package hosted by Classmethod inc. yum repository.
