@@ -1,9 +1,12 @@
 #!/bin/bash
 
+MAJOR_VER=0
+MINOR_VER=1
+PATCH_VER=0
 OUTPUTDIR=../repo/yum/x86_64
 
 fpm -s dir -t rpm \
-	-v 0.1.0 \
+	-v $MAJOR_VER.$MINOR_VER.$PATCH_VER \
 	-n ec2-swap \
 	-a noarch \
 	-C ./source \
@@ -18,4 +21,3 @@ fpm -s dir -t rpm \
 	--after-install ./script/postinstall \
 	--before-remove ./script/preuninstall \
 	.
-createrepo -v -o $OUTPUTDIR $OUTPUTDIR
