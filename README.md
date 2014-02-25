@@ -14,7 +14,11 @@ Just execute three command lines below.
 
 # How to build
 
-ec2-swap is built on [fpm build tool](https://github.com/jordansissel/fpm). After fpm install, run `build.sh`.
+## Requisite
+
+- [fpm](https://github.com/jordansissel/fpm) (gem)
+
+ec2-swap is built on . After fpm install, run `build.sh`.
 
 # License
 
