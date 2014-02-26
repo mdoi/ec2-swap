@@ -13,7 +13,7 @@ ec2-swap is an RPM package project to create and swapon an swap image on EC2 ins
 ec2-swap RPM package hosted by Classmethod inc. yum repository.
 Just execute three command lines below.
 
-    sudo rpm -ivh http://repo.classmethod.info/yum/x86_64/cm-repo-release-0.1.0-1.noarch.rpm
+    sudo rpm -ivh http://repo.classmethod.info/yum/x86_64/cm-repo-release-0.2.0-1.noarch.rpm
     sudo yum install -y ec2-swap
     sudo service ec2-swap start
 
