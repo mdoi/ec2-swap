@@ -15,6 +15,7 @@ RETVAL=0
 start() {
   # When system rebooted, return function without any process below.
   if [ -e $SWAPFILENAME ]; then
+    logger -p local0.notice -t ec2-swap "a swap file exist, exit"
     return 
   fi
 
@@ -54,15 +55,17 @@ start() {
 	  mkdir $INSTANCEVOL_MOUNTPOINT
 	fi
 	mount -t ext4 $INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT
-	fallocate -l $SIZE $SWAPFILENAME && mkswap $SWAPFILENAME 
+  fallocate -l $SIZE $SWAPFILENAME && mkswap $SWAPFILENAME && logger -p local0.notice -t ec2-swap "$SWAPFILENAME($SIZE) created"
   umount $INSTANCEVOL_MOUNTPOINT
 
   # Configure /etc/fstab to enable auto mount ephemeral disk and swapfile
   if ! (cat /etc/fstab | grep $INSTANCEVOL_MOUNTPOINT); then
     echo "$INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT auto defaults 0 0" >> /etc/fstab
+    logger -p local0.notice -t ec2-swap "ephemeral disk entry add in /etc/fstab"
 	fi
   if ! (cat /etc/fstab | grep $SWAPFILENAME); then
     echo "$SWAPFILENAME swap swap defaults 0 0" >> /etc/fstab
+    logger -p local0.notice -t ec2-swap "swap entry add in /etc/fstab"
 	fi
 
   # This script run after rc.sysinit, so it is necessary to mount and swapon explicitly.
