@@ -39,9 +39,15 @@ start() {
 	if cat /proc/mounts | grep $INSTANCEVOL_MOUNTPOINT; then
 		umount $INSTANCEVOL_MOUNTPOINT
 	fi
-	#mkfs -t ext4 $INSTANCEVOL_REALNAME
-  tune2fs -O extent,flex_bg,huge_file,uninit_bg,dir_nlink,extra_isize $INSTANCEVOL_REALNAME
-  e2fsck -fDy $INSTANCEVOL_REALNAME
+  case "$INSTANCEVOL_CONVMETHOD" in
+    mkfs)
+      mkfs -t ext4 $INSTANCEVOL_REALNAME
+      ;;
+    *)
+      tune2fs -O extent,flex_bg,huge_file,uninit_bg,dir_nlink,extra_isize $INSTANCEVOL_REALNAME
+      e2fsck -fDy $INSTANCEVOL_REALNAME
+      ;;
+  esac
 
 	# Mount and create swap file
 	if [ ! -d $INSTANCEVOL_MOUNTPOINT ]; then
