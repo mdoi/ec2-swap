@@ -3,7 +3,7 @@
 MAJOR_VER=0
 MINOR_VER=2
 PATCH_VER=0
-OUTPUTDIR=../repo/yum/x86_64
+OUTPUTDIR=../repo/docroot/yum/x86_64
 
 fpm -s dir -t rpm \
 	-v $MAJOR_VER.$MINOR_VER.$PATCH_VER \

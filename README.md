@@ -24,7 +24,7 @@ Just execute three command lines below.
 - [fpm](https://github.com/jordansissel/fpm) (gem)
 
 - ec2-swap is currently built on fpm.
-- After fpm install, `mkdir ../repo/yum/x86_64`(if you don't like there, change `OUTPUTDIR` in `build.sh`) and run `build.sh`.
+- After fpm install, `mkdir -p ../repo/docroot/yum/x86_64`(if you don't like there, change `OUTPUTDIR` in `build.sh`) and run `build.sh`.
 
 # License
 
