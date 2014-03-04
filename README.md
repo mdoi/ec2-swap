@@ -15,7 +15,6 @@ Just execute three command lines below.
 
     sudo rpm -ivh http://repo.classmethod.info/yum/x86_64/cm-repo-release-0.2.0-1.noarch.rpm
     sudo yum install -y ec2-swap
-    sudo service ec2-swap start
 
 # How to build
 

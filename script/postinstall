@@ -1,1 +1,2 @@
 /sbin/chkconfig --add ec2-swap
+/sbin/service ec2-swap start
