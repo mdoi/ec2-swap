@@ -13,64 +13,87 @@
 RETVAL=0
 
 start() {
-    # When system rebooted, return function without any process below.
+  # Whether instance volume attached or not.
+  if [ curl -s 169.254.169.254/latest/meta-data/block-device-mapping/$INSTANCEVOL_VIRTNAME | grep 'sd' 1> 2>&1 ]; then
+    # will create swapfile on instance volume
+    SWAPFILEON=$INSTANCEVOL_MOUNTPOINT
     if [ -e $SWAPFILENAME ]; then
-        logger -i -p local0.notice -t ec2-swap "a swap file exist, exit"
-        return 
+      # When system rebooted, return function without any process below.
+      logger -i -p local0.notice -t ec2-swap "a swap file exist on instance store, exit."
+      return 
     fi
-
     # Get ephemeral disk device name by EC2 meta-data server
     INSTANCEVOL_REALNAME=/dev/`curl -s 169.254.169.254/latest/meta-data/block-device-mapping/$INSTANCEVOL_VIRTNAME`
-    # Get memory capacity
-    MEMSIZE=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
-
-    # Determine swap file size from memory capacity according to below URL
-    # https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Installation_Guide/s2-diskpartrecommend-x86.html
-    if [ $MEMSIZE -lt 2097152 ]; then
-        SIZE=$((MEMSIZE * 2))k
-    elif [ $MEMSIZE -lt 8388608 ]; then
-        SIZE=${MEMSIZE}k
-    elif [ $MEMSIZE -lt 67108864 ]; then
-        SIZE=$((MEMSIZE / 2))k
-    else
-        SIZE=4194304k
-    fi
-
-    # Unmount and convert ephemeral disk from ext3 to ext4 in order to execute fallocate
+    # Unmount and convert instance volume from ext3 to ext4 in order to execute fallocate
     if cat /proc/mounts | grep $INSTANCEVOL_MOUNTPOINT; then
-        umount $INSTANCEVOL_MOUNTPOINT
+      umount $INSTANCEVOL_MOUNTPOINT
     fi
     case "$INSTANCEVOL_CONVMETHOD" in
-        mkfs)
-            mkfs -t ext4 $INSTANCEVOL_REALNAME
-            ;;
-        *)
-            tune2fs -O extent,flex_bg,huge_file,uninit_bg,dir_nlink,extra_isize $INSTANCEVOL_REALNAME
-            e2fsck -fDy $INSTANCEVOL_REALNAME
-            ;;
+      mkfs)
+        mkfs -t ext4 $INSTANCEVOL_REALNAME
+        ;;
+      *)
+        tune2fs -O extent,flex_bg,huge_file,uninit_bg,dir_nlink,extra_isize $INSTANCEVOL_REALNAME
+        e2fsck -fDy $INSTANCEVOL_REALNAME
+        ;;
     esac
-
-    # Mount and create swap file
-    if [ ! -d $INSTANCEVOL_MOUNTPOINT ]; then
-        mkdir $INSTANCEVOL_MOUNTPOINT
-    fi
+    # Remount instance volume
     mount -t ext4 $INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT
-    fallocate -l $SIZE $SWAPFILENAME && mkswap $SWAPFILENAME && logger -i -p local0.notice -t ec2-swap "$SWAPFILENAME($SIZE) created"
-    umount $INSTANCEVOL_MOUNTPOINT
-
-    # Configure /etc/fstab to enable auto mount ephemeral disk and swapfile
-    if ! (cat /etc/fstab | grep $INSTANCEVOL_MOUNTPOINT); then
-        echo "$INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT auto defaults 0 0" >> /etc/fstab
-        logger -i -p local0.notice -t ec2-swap "ephemeral disk entry add in /etc/fstab"
+  else
+    # will create swapfile on root volume
+    SWAPFILEON=/
+    # delete old swapfile
+    if [ -e $SWAPFILENAME ]; then
+      rm -f $SWAPFILENAME
+      logger -i -p local0.notice -t ec2-swap "a swap file exist, removed."
     fi
-    if ! (cat /etc/fstab | grep $SWAPFILENAME); then
-        echo "$SWAPFILENAME swap swap defaults 0 0" >> /etc/fstab
-        logger -i -p local0.notice -t ec2-swap "swap entry add in /etc/fstab"
-    fi
+  fi
 
-    # This script run after rc.sysinit, so it is necessary to mount and swapon explicitly.
-    mount -a
-    swapon -a
+  # Get memory capacity
+  MEMORYSIZE=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
+  # Calculate recommended size from memory capacity according to below URL
+  # https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Installation_Guide/s2-diskpartrecommend-x86.html
+  if [ $MEMSIZE -lt 2097152 ]; then
+    RECOMMENDSIZE=$((MEMORYSIZE * 2))k
+  elif [ $MEMSIZE -lt 8388608 ]; then
+    RECOMMENDSIZE=${MEMORYSIZE}k
+  elif [ $MEMSIZE -lt 67108864 ]; then
+    RECOMMENDSIZE=$((MEMORYSIZE / 2))k
+  else
+    RECOMMENDSIZE=4194304k
+  fi
+  # Calculate max size from KEEPAVAILDISK_PERCENT paramenter and available capacity
+  set `df $SWAPFILEON | tail -n +2`
+  VOLSIZE=$2
+  VOLAVAIL=$4
+  MAXSIZE=$(({VOLSIZE}*{KEEPAVAILDISK_PERCENT}/100))
+  # Determine Swap file size lower between recommended size and max size.
+  if [ $RECOMMENDSIZE -gt $MAXSIZE ]; then
+    SIZE=$MAXSIZE
+  else
+    SIZE=$RECOMMENDSIZE
+  fi
+
+  # Create directory if not exist
+  if [ ! -d $INSTANCEVOL_MOUNTPOINT ]; then
+      mkdir $INSTANCEVOL_MOUNTPOINT
+  fi
+  # Create swap file
+  fallocate -l $SIZE $SWAPFILENAME && mkswap $SWAPFILENAME && logger -i -p local0.notice -t ec2-swap "$SWAPFILENAME($SIZE) created"
+
+  # Configure /etc/fstab to enable auto mount ephemeral disk and swapfile
+  if ! (cat /etc/fstab | grep $INSTANCEVOL_MOUNTPOINT); then
+    echo "$INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT auto defaults 0 0" >> /etc/fstab
+    logger -i -p local0.notice -t ec2-swap "ephemeral disk entry add in /etc/fstab"
+  fi
+  if ! (cat /etc/fstab | grep $SWAPFILENAME); then
+    echo "$SWAPFILENAME swap swap defaults 0 0" >> /etc/fstab
+    logger -i -p local0.notice -t ec2-swap "swap entry add in /etc/fstab"
+  fi
+
+  # This script run after rc.sysinit, so it is necessary to mount and swapon explicitly.
+  mount -a
+  swapon -a
 }
 
 stop () {

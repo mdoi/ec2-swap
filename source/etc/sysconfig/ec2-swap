@@ -5,3 +5,4 @@ SWAPFILENAME=$INSTANCEVOL_MOUNTPOINT/swap.img
 #   For minimize convert time, we recommends "mkfs".
 #   Only when some files create before ec2-swap service running in system boot sequence.
 INSTANCEVOL_CONVMETHOD=mkfs
+KEEPAVAILDISK_PERCENT=10
