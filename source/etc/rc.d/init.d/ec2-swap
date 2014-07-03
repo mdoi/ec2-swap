@@ -14,7 +14,7 @@ RETVAL=0
 
 start() {
   # Whether instance volume attached or not.
-  if [ curl -s 169.254.169.254/latest/meta-data/block-device-mapping/$INSTANCEVOL_VIRTNAME | grep 'sd' 1> 2>&1 ]; then
+  if curl -s 169.254.169.254/latest/meta-data/block-device-mapping/$INSTANCEVOL_VIRTNAME | grep 'sd' 1> /dev/null 2>&1; then
     # will create swapfile on instance volume
     SWAPFILEON=$INSTANCEVOL_MOUNTPOINT
     if [ -e $SWAPFILENAME ]; then
@@ -53,25 +53,25 @@ start() {
   MEMORYSIZE=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
   # Calculate recommended size from memory capacity according to below URL
   # https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Installation_Guide/s2-diskpartrecommend-x86.html
-  if [ $MEMSIZE -lt 2097152 ]; then
-    RECOMMENDSIZE=$((MEMORYSIZE * 2))k
-  elif [ $MEMSIZE -lt 8388608 ]; then
-    RECOMMENDSIZE=${MEMORYSIZE}k
-  elif [ $MEMSIZE -lt 67108864 ]; then
-    RECOMMENDSIZE=$((MEMORYSIZE / 2))k
+  if [ $MEMORYSIZE -lt 2097152 ]; then
+    RECOMMENDSIZE=$((MEMORYSIZE * 2))
+  elif [ $MEMORYSIZE -lt 8388608 ]; then
+    RECOMMENDSIZE=${MEMORYSIZE}
+  elif [ $MEMORYSIZE -lt 67108864 ]; then
+    RECOMMENDSIZE=$((MEMORYSIZE / 2))
   else
-    RECOMMENDSIZE=4194304k
+    RECOMMENDSIZE=4194304
   fi
   # Calculate max size from KEEPAVAILDISK_PERCENT paramenter and available capacity
   set `df $SWAPFILEON | tail -n +2`
   VOLSIZE=$2
   VOLAVAIL=$4
-  MAXSIZE=$(({VOLSIZE}*{KEEPAVAILDISK_PERCENT}/100))
+  MAXSIZE=$((VOLAVAIL-VOLSIZE*KEEPAVAILDISK_PERCENT/100))
   # Determine Swap file size lower between recommended size and max size.
   if [ $RECOMMENDSIZE -gt $MAXSIZE ]; then
-    SIZE=$MAXSIZE
+    SIZE=${MAXSIZE}k
   else
-    SIZE=$RECOMMENDSIZE
+    SIZE=${RECOMMENDSIZE}k
   fi
 
   # Create directory if not exist
