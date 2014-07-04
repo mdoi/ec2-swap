@@ -39,6 +39,11 @@ start() {
     esac
     # Remount instance volume
     mount -t ext4 $INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT
+    # Configure /etc/fstab to enable auto mount instance volume
+    if ! (cat /etc/fstab | grep $INSTANCEVOL_MOUNTPOINT); then
+      echo "$INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT auto defaults 0 0" >> /etc/fstab
+      logger -i -p local0.notice -t ec2-swap "ephemeral disk entry add in /etc/fstab"
+    fi
   else
     # will create swapfile on root volume
     SWAPFILEON=/
@@ -78,14 +83,11 @@ start() {
   if [ ! -d $INSTANCEVOL_MOUNTPOINT ]; then
       mkdir $INSTANCEVOL_MOUNTPOINT
   fi
+
   # Create swap file
   fallocate -l $SIZE $SWAPFILENAME && mkswap $SWAPFILENAME && logger -i -p local0.notice -t ec2-swap "$SWAPFILENAME($SIZE) created"
 
-  # Configure /etc/fstab to enable auto mount ephemeral disk and swapfile
-  if ! (cat /etc/fstab | grep $INSTANCEVOL_MOUNTPOINT); then
-    echo "$INSTANCEVOL_REALNAME $INSTANCEVOL_MOUNTPOINT auto defaults 0 0" >> /etc/fstab
-    logger -i -p local0.notice -t ec2-swap "ephemeral disk entry add in /etc/fstab"
-  fi
+  # Configure /etc/fstab to enable auto mount swapfile
   if ! (cat /etc/fstab | grep $SWAPFILENAME); then
     echo "$SWAPFILENAME swap swap defaults 0 0" >> /etc/fstab
     logger -i -p local0.notice -t ec2-swap "swap entry add in /etc/fstab"
