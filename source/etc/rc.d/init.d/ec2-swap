@@ -21,6 +21,9 @@ start() {
 
     # Get ephemeral disk device name by EC2 meta-data server
     INSTANCEVOL_REALNAME=/dev/`curl -s 169.254.169.254/latest/meta-data/block-device-mapping/$INSTANCEVOL_VIRTNAME`
+    # Get instance type for swap size calculation
+    INSTANCE_TYPE=`curl -s 169.254.169.254/latest/meta-data/instance-type`
+
     # Get memory capacity
     MEMSIZE=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
 
@@ -29,7 +32,11 @@ start() {
     if [ $MEMSIZE -lt 2097152 ]; then
         SIZE=$((MEMSIZE * 2))k
     elif [ $MEMSIZE -lt 8388608 ]; then
-        SIZE=${MEMSIZE}k
+        if [ $INSTANCE_TYPE = 'm3.medium' ]; then
+            SIZE=$((MEMSIZE / 2))k
+        else
+            SIZE=${MEMSIZE}k
+        fi
     elif [ $MEMSIZE -lt 67108864 ]; then
         SIZE=$((MEMSIZE / 2))k
     else
